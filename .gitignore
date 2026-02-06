@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environments
+backend/venv/
+backend/.venv/
+
+# Lambda deployment artifacts
+backend/package/
+backend/lambda-deployment.zip
+
+# Environment files
+.env
+backend/.env
+
+# pytest / ruff cache
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Node
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
+
+# IDE
+.vscode/
+.idea/
+*.sw?
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Claude Code
+.claude/
+
+# OS
+Thumbs.db

@@ -1,0 +1,29 @@
+# Web Framework
+fastapi>=0.110.0
+
+# Database
+sqlalchemy==2.0.25
+pymysql==1.1.0
+alembic==1.13.1
+
+# Validation & Settings
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# External APIs
+openai==1.12.0
+google-genai>=1.0.0
+youtube-transcript-api==0.6.2
+google-api-python-client==2.116.0
+yfinance==0.2.36
+
+# Async support
+httpx>=0.28.0
+aiohttp==3.9.3
+
+# Utilities
+python-multipart==0.0.6
+
+# AWS Lambda
+mangum==0.17.0
