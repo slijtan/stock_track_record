@@ -52,3 +52,9 @@ npm-debug.log*
 
 # OS
 Thumbs.db
+
+# Codev
+.agent-farm/
+.consult/
+codev/.update-hashes.json
+.builders/
