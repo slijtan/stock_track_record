@@ -1,10 +1,7 @@
 # Web Framework
 fastapi>=0.110.0
 
-# Database
-sqlalchemy==2.0.25
-pymysql==1.1.0
-alembic==1.13.1
+# Database (DynamoDB via boto3 - included in Lambda runtime)
 
 # Validation & Settings
 pydantic==2.5.3

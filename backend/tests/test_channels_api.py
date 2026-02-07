@@ -1,10 +1,9 @@
-from datetime import date
-
-from app.db.models import Channel, Video, Stock, StockMention
+from app.db.dynamodb import get_table
+from app.db.dynamodb_models import Channel, Video, Stock, StockMention
 
 
 class TestCreateChannel:
-    def test_create_channel_success(self, client, db_session):
+    def test_create_channel_success(self, client):
         """Test creating a channel with valid URL."""
         response = client.post(
             "/api/channels",
@@ -19,7 +18,7 @@ class TestCreateChannel:
         assert data["status"] == "pending"
         assert data["time_range_months"] == 12
 
-    def test_create_channel_invalid_url(self, client, db_session):
+    def test_create_channel_invalid_url(self, client):
         """Test creating a channel with invalid URL."""
         response = client.post(
             "/api/channels",
@@ -30,7 +29,7 @@ class TestCreateChannel:
         )
         assert response.status_code == 422  # Validation error
 
-    def test_create_channel_duplicate(self, client, db_session):
+    def test_create_channel_duplicate(self, client):
         """Test creating a duplicate channel."""
         # Create first channel
         client.post(
@@ -47,7 +46,7 @@ class TestCreateChannel:
 
 
 class TestListChannels:
-    def test_list_channels_empty(self, client, db_session):
+    def test_list_channels_empty(self, client):
         """Test listing channels when none exist."""
         response = client.get("/api/channels")
         assert response.status_code == 200
@@ -55,7 +54,7 @@ class TestListChannels:
         assert data["items"] == []
         assert data["total"] == 0
 
-    def test_list_channels_with_data(self, client, db_session):
+    def test_list_channels_with_data(self, client):
         """Test listing channels with data."""
         # Create channels
         client.post(
@@ -73,7 +72,7 @@ class TestListChannels:
         assert len(data["items"]) == 2
         assert data["total"] == 2
 
-    def test_list_channels_pagination(self, client, db_session):
+    def test_list_channels_pagination(self, client):
         """Test channel list pagination."""
         # Create 5 channels
         for i in range(5):
@@ -92,7 +91,7 @@ class TestListChannels:
 
 
 class TestGetChannel:
-    def test_get_channel_success(self, client, db_session):
+    def test_get_channel_success(self, client):
         """Test getting a channel by ID."""
         # Create channel
         create_response = client.post(
@@ -105,14 +104,14 @@ class TestGetChannel:
         assert response.status_code == 200
         assert response.json()["id"] == channel_id
 
-    def test_get_channel_not_found(self, client, db_session):
+    def test_get_channel_not_found(self, client):
         """Test getting a non-existent channel."""
         response = client.get("/api/channels/non-existent-id")
         assert response.status_code == 404
 
 
 class TestDeleteChannel:
-    def test_delete_channel_success(self, client, db_session):
+    def test_delete_channel_success(self, client):
         """Test deleting a channel."""
         # Create channel
         create_response = client.post(
@@ -128,14 +127,14 @@ class TestDeleteChannel:
         response = client.get(f"/api/channels/{channel_id}")
         assert response.status_code == 404
 
-    def test_delete_channel_not_found(self, client, db_session):
+    def test_delete_channel_not_found(self, client):
         """Test deleting a non-existent channel."""
         response = client.delete("/api/channels/non-existent-id")
         assert response.status_code == 404
 
 
 class TestChannelLogs:
-    def test_get_channel_logs(self, client, db_session):
+    def test_get_channel_logs(self, client):
         """Test getting channel logs."""
         # Create channel
         create_response = client.post(
@@ -150,7 +149,7 @@ class TestChannelLogs:
 
 
 class TestChannelStocks:
-    def test_get_channel_stocks_empty(self, client, db_session):
+    def test_get_channel_stocks_empty(self, client):
         """Test getting stocks for a channel with no data."""
         create_response = client.post(
             "/api/channels",
@@ -164,40 +163,41 @@ class TestChannelStocks:
         assert data["channel_id"] == channel_id
         assert data["stocks"] == []
 
-    def test_get_channel_stocks_with_data(self, client, db_session):
+    def test_get_channel_stocks_with_data(self, client):
         """Test getting stocks for a channel with stock mentions."""
-        # Create channel directly in DB for more control
+        table = get_table()
+        stocks_table = get_table("-Stocks")
+
+        # Create channel directly in DynamoDB
         channel = Channel(
             youtube_channel_id="UC123",
             name="Test Channel",
             url="https://youtube.com/@test",
             status="completed",
         )
-        db_session.add(channel)
-        db_session.commit()
+        table.put_item(Item=channel.to_item())
 
         video = Video(
             channel_id=channel.id,
             youtube_video_id="abc123",
             title="Test Video",
             url="https://youtube.com/watch?v=abc123",
-            published_at=date(2024, 1, 15),
+            published_at="2024-01-15",
             analysis_status="completed",
         )
-        db_session.add(video)
+        table.put_item(Item=video.to_item())
 
         stock = Stock(ticker="AAPL", name="Apple Inc.", exchange="NASDAQ")
-        db_session.add(stock)
-        db_session.commit()
+        stocks_table.put_item(Item=stock.to_item())
 
         mention = StockMention(
             video_id=video.id,
             ticker="AAPL",
             sentiment="buy",
             price_at_mention=185.50,
+            published_at="2024-01-15",
         )
-        db_session.add(mention)
-        db_session.commit()
+        table.put_item(Item=mention.to_item())
 
         response = client.get(f"/api/channels/{channel.id}/stocks")
         assert response.status_code == 200
@@ -208,39 +208,35 @@ class TestChannelStocks:
 
 
 class TestChannelTimeline:
-    def test_get_channel_timeline(self, client, db_session):
+    def test_get_channel_timeline(self, client):
         """Test getting timeline for a channel."""
-        # Create channel
+        table = get_table()
+
         channel = Channel(
             youtube_channel_id="UC123",
             name="Test Channel",
             url="https://youtube.com/@test",
             status="completed",
         )
-        db_session.add(channel)
-        db_session.commit()
+        table.put_item(Item=channel.to_item())
 
         video = Video(
             channel_id=channel.id,
             youtube_video_id="abc123",
             title="Test Video",
             url="https://youtube.com/watch?v=abc123",
-            published_at=date(2024, 1, 15),
+            published_at="2024-01-15",
             analysis_status="completed",
         )
-        db_session.add(video)
-
-        stock = Stock(ticker="AAPL", name="Apple Inc.", exchange="NASDAQ")
-        db_session.add(stock)
-        db_session.commit()
+        table.put_item(Item=video.to_item())
 
         mention = StockMention(
             video_id=video.id,
             ticker="AAPL",
             sentiment="buy",
+            published_at="2024-01-15",
         )
-        db_session.add(mention)
-        db_session.commit()
+        table.put_item(Item=mention.to_item())
 
         response = client.get(f"/api/channels/{channel.id}/timeline")
         assert response.status_code == 200
@@ -251,40 +247,36 @@ class TestChannelTimeline:
 
 
 class TestStockDrilldown:
-    def test_get_stock_drilldown(self, client, db_session):
+    def test_get_stock_drilldown(self, client):
         """Test getting stock drilldown."""
-        # Create channel
+        table = get_table()
+
         channel = Channel(
             youtube_channel_id="UC123",
             name="Test Channel",
             url="https://youtube.com/@test",
             status="completed",
         )
-        db_session.add(channel)
-        db_session.commit()
+        table.put_item(Item=channel.to_item())
 
         video = Video(
             channel_id=channel.id,
             youtube_video_id="abc123",
             title="Test Video",
             url="https://youtube.com/watch?v=abc123",
-            published_at=date(2024, 1, 15),
+            published_at="2024-01-15",
             analysis_status="completed",
         )
-        db_session.add(video)
-
-        stock = Stock(ticker="AAPL", name="Apple Inc.", exchange="NASDAQ")
-        db_session.add(stock)
-        db_session.commit()
+        table.put_item(Item=video.to_item())
 
         mention = StockMention(
             video_id=video.id,
             ticker="AAPL",
             sentiment="buy",
             price_at_mention=185.50,
+            published_at="2024-01-15",
         )
-        db_session.add(mention)
-        db_session.commit()
+        table.put_item(Item=mention.to_item())
 
         response = client.get(f"/api/channels/{channel.id}/stocks/AAPL")
         assert response.status_code == 200

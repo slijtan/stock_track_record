@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta, date
+from decimal import Decimal
 from typing import Optional, Dict, Any, List
 import httpx
-from sqlalchemy.orm import Session
 
-from app.db.models import Stock
 from app.config import get_settings
+from app.db.dynamodb import get_table
+from app.db.dynamodb_models import Stock
 
 # Simple in-memory cache for prices
 _price_cache: Dict[str, Dict[str, Any]] = {}
@@ -226,9 +227,10 @@ def get_batch_historical_prices(ticker_dates: List[tuple]) -> Dict[str, float]:
         return {}
 
 
-def get_current_price(db: Session, ticker: str) -> Dict[str, Any]:
+def get_current_price(ticker: str) -> Dict[str, Any]:
     """Get current stock price - returns from DB or fetches from Finnhub."""
     ticker = ticker.upper()
+    stocks_table = get_table("-Stocks")
 
     # Check memory cache first
     if ticker in _price_cache:
@@ -240,19 +242,21 @@ def get_current_price(db: Session, ticker: str) -> Dict[str, Any]:
             }
 
     # Check database for recent price (within 1 hour)
-    db_stock = db.query(Stock).filter(Stock.ticker == ticker).first()
+    stock_resp = stocks_table.get_item(Key={"ticker": ticker})
+    db_stock = Stock.from_item(stock_resp["Item"]) if "Item" in stock_resp else None
+
     if db_stock and db_stock.last_price and db_stock.price_updated_at:
-        age = datetime.utcnow() - db_stock.price_updated_at
+        updated_at = datetime.fromisoformat(db_stock.price_updated_at.replace("Z", "+00:00")).replace(tzinfo=None)
+        age = datetime.utcnow() - updated_at
         if age < timedelta(hours=1):
-            # Cache it and return
             _price_cache[ticker] = {
-                "price": float(db_stock.last_price),
-                "updated_at": db_stock.price_updated_at,
+                "price": db_stock.last_price,
+                "updated_at": updated_at,
                 "cached_at": datetime.utcnow(),
             }
             return {
-                "price": float(db_stock.last_price),
-                "updated_at": db_stock.price_updated_at,
+                "price": db_stock.last_price,
+                "updated_at": updated_at,
             }
 
     # Fetch from Finnhub (fast, good rate limits)
@@ -261,6 +265,7 @@ def get_current_price(db: Session, ticker: str) -> Dict[str, Any]:
         price = get_finnhub_quote(ticker, settings.finnhub_api_key)
         if price:
             now = datetime.utcnow()
+            now_iso = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
             # Update cache
             _price_cache[ticker] = {
                 "price": price,
@@ -269,16 +274,24 @@ def get_current_price(db: Session, ticker: str) -> Dict[str, Any]:
             }
             # Update database
             if db_stock:
-                db_stock.last_price = price
-                db_stock.price_updated_at = now
-                db.commit()
+                stocks_table.update_item(
+                    Key={"ticker": ticker},
+                    UpdateExpression="SET last_price = :price, price_updated_at = :updated",
+                    ExpressionAttributeValues={
+                        ":price": Decimal(str(price)),
+                        ":updated": now_iso,
+                    },
+                )
             return {"price": price, "updated_at": now}
 
     # Return stale DB price if available
     if db_stock and db_stock.last_price:
+        updated_at = None
+        if db_stock.price_updated_at:
+            updated_at = datetime.fromisoformat(db_stock.price_updated_at.replace("Z", "+00:00")).replace(tzinfo=None)
         return {
-            "price": float(db_stock.last_price),
-            "updated_at": db_stock.price_updated_at,
+            "price": db_stock.last_price,
+            "updated_at": updated_at,
         }
 
     raise ValueError(f"Could not fetch price for {ticker}")

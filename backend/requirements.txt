@@ -2,10 +2,7 @@
 fastapi>=0.110.0
 uvicorn[standard]==0.27.0
 
-# Database
-sqlalchemy==2.0.25
-pymysql==1.1.0
-alembic==1.13.1
+# Database (DynamoDB - boto3 listed under AWS Lambda section)
 
 # Validation & Settings
 pydantic==2.5.3

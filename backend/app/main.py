@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.db.dynamodb import ensure_tables_exist
 from app.routers import channels, stocks
 
 settings = get_settings()
@@ -11,8 +12,9 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    # Startup - only start background runner in non-Lambda environment
+    # Ensure DynamoDB tables exist on startup
     if not settings.is_lambda:
+        ensure_tables_exist()
         from app.services.background_tasks import start_background_runner
         start_background_runner()
     yield

@@ -4,7 +4,6 @@ AWS Lambda handler for the Stock Track Record Worker.
 This module processes SQS messages to handle channel processing jobs.
 """
 import json
-from app.db.database import SessionLocal
 from app.services.processing_service import process_channel
 
 
@@ -30,15 +29,12 @@ def handler(event, context):
 
             print(f"Processing channel: {channel_id}")
 
-            db = SessionLocal()
             try:
-                process_channel(db, channel_id)
+                process_channel(channel_id)
                 print(f"Successfully processed channel: {channel_id}")
             except Exception as e:
                 print(f"Error processing channel {channel_id}: {e}")
                 raise  # Re-raise to mark message as failed
-            finally:
-                db.close()
 
         except json.JSONDecodeError as e:
             print(f"Invalid JSON in message: {e}")

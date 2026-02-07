@@ -14,7 +14,6 @@ class StockMentionResponse(BaseModel):
     created_at: datetime
     video: Optional["VideoResponse"] = None
 
-    model_config = {"from_attributes": True}
 
 
 class VideoResponse(BaseModel):
@@ -28,7 +27,6 @@ class VideoResponse(BaseModel):
     analysis_status: str
     created_at: datetime
 
-    model_config = {"from_attributes": True}
 
 
 class ChannelStockResponse(BaseModel):

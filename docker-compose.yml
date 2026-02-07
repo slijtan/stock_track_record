@@ -1,19 +1,18 @@
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: stock-track-mysql
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: stock-track-dynamodb
+    user: root
     ports:
-      - "3307:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: stock_track_record
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
     volumes:
-      - stock_track_mysql_data:/var/lib/mysql
+      - stock_track_dynamodb_data:/home/dynamodblocal/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "curl -s http://localhost:8000 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
 
 volumes:
-  stock_track_mysql_data:
+  stock_track_dynamodb_data:

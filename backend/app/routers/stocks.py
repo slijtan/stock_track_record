@@ -1,7 +1,5 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from fastapi import APIRouter
 
-from app.db.database import get_db
 from app.schemas.stock import StockPriceResponse
 from app.services import stock_price_service
 
@@ -9,10 +7,10 @@ router = APIRouter()
 
 
 @router.get("/stocks/{ticker}/price", response_model=StockPriceResponse)
-async def get_stock_price(ticker: str, db: Session = Depends(get_db)):
+async def get_stock_price(ticker: str):
     """Get current stock price."""
     try:
-        price_data = stock_price_service.get_current_price(db, ticker.upper())
+        price_data = stock_price_service.get_current_price(ticker.upper())
         return StockPriceResponse(
             ticker=ticker.upper(),
             price=price_data.get("price"),

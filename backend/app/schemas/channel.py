@@ -35,7 +35,6 @@ class ChannelResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
 
 
 class ChannelListResponse(BaseModel):
@@ -51,8 +50,6 @@ class ProcessingLogResponse(BaseModel):
     log_level: str
     message: str
     created_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 class LogsResponse(BaseModel):

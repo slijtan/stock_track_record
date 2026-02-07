@@ -7,8 +7,10 @@ class Settings(BaseSettings):
     app_name: str = "Stock Track Record"
     debug: bool = False
 
-    # Database
-    database_url: str = "mysql+pymysql://root:root@localhost:3306/stock_track_record"
+    # Database (DynamoDB)
+    dynamodb_endpoint: str = "http://localhost:8000"
+    dynamodb_table_prefix: str = "StockTrackRecord"
+    dynamodb_region: str = "us-east-1"
 
     # External APIs
     youtube_api_key: str = ""
