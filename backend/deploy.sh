@@ -8,9 +8,11 @@ API_FUNCTION_NAME="stock-track-record-api"
 WORKER_FUNCTION_NAME="stock-track-record-worker"
 LAMBDA_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/stock-track-record-lambda-role"
 SQS_QUEUE_URL="https://sqs.us-east-1.amazonaws.com/${ACCOUNT_ID}/stock-track-record-processing-queue"
-DB_ENDPOINT="stock-track-record-cluster.cluster-c2hgmi4acygb.us-east-1.rds.amazonaws.com"
-VPC_SECURITY_GROUP="sg-05967718937fd7fa4"
-VPC_SUBNETS="subnet-3104673d,subnet-d6bd1ffd,subnet-39483a5c"
+FRONTEND_URL="https://d20r1f7t2ii5iy.cloudfront.net"
+
+# DynamoDB configuration
+DYNAMODB_TABLE_PREFIX="StockTrackRecord"
+DYNAMODB_REGION="us-east-1"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -36,7 +38,7 @@ pip install -r requirements.txt -t /tmp/lambda-package --quiet --upgrade --no-de
 
 # Install remaining dependencies
 pip install annotated-types typing_extensions anyio starlette mangum httpx google-genai \
-    sqlalchemy pymysql alembic pydantic-settings python-dotenv httpcore sniffio certifi idna h11 \
+    pydantic-settings python-dotenv httpcore sniffio certifi idna h11 \
     google-api-python-client google-auth google-auth-httplib2 httplib2 uritemplate pyparsing \
     cachetools pyasn1 pyasn1-modules rsa youtube-transcript-api yfinance \
     -t /tmp/lambda-package --quiet --upgrade
@@ -68,6 +70,16 @@ if aws lambda get-function --function-name $API_FUNCTION_NAME --region $AWS_REGI
         --function-name $API_FUNCTION_NAME \
         --zip-file fileb:///tmp/lambda-deployment.zip \
         --region $AWS_REGION > /dev/null
+
+    echo "Waiting for API Lambda code update..."
+    aws lambda wait function-updated --function-name $API_FUNCTION_NAME --region $AWS_REGION
+
+    echo "Updating API Lambda configuration..."
+    aws lambda update-function-configuration \
+        --function-name $API_FUNCTION_NAME \
+        --environment "Variables={DYNAMODB_TABLE_PREFIX=${DYNAMODB_TABLE_PREFIX},DYNAMODB_REGION=${DYNAMODB_REGION},DYNAMODB_ENDPOINT=,IS_LAMBDA=true,SQS_QUEUE_URL=${SQS_QUEUE_URL},FRONTEND_URL=${FRONTEND_URL}}" \
+        --vpc-config SubnetIds=[],SecurityGroupIds=[] \
+        --region $AWS_REGION > /dev/null
 else
     echo "Creating new API Lambda function..."
     aws lambda create-function \
@@ -78,8 +90,7 @@ else
         --zip-file fileb:///tmp/lambda-deployment.zip \
         --timeout 30 \
         --memory-size 512 \
-        --environment "Variables={DATABASE_URL=mysql+pymysql://admin:StockTrack2024Secure@${DB_ENDPOINT}:3306/stock_track_record,IS_LAMBDA=true,SQS_QUEUE_URL=${SQS_QUEUE_URL},FRONTEND_URL=https://d20r1f7t2ii5iy.cloudfront.net}" \
-        --vpc-config SubnetIds=${VPC_SUBNETS},SecurityGroupIds=${VPC_SECURITY_GROUP} \
+        --environment "Variables={DYNAMODB_TABLE_PREFIX=${DYNAMODB_TABLE_PREFIX},DYNAMODB_REGION=${DYNAMODB_REGION},DYNAMODB_ENDPOINT=,IS_LAMBDA=true,SQS_QUEUE_URL=${SQS_QUEUE_URL},FRONTEND_URL=${FRONTEND_URL}}" \
         --region $AWS_REGION > /dev/null
 fi
 
@@ -93,6 +104,16 @@ if aws lambda get-function --function-name $WORKER_FUNCTION_NAME --region $AWS_R
         --function-name $WORKER_FUNCTION_NAME \
         --zip-file fileb:///tmp/lambda-deployment.zip \
         --region $AWS_REGION > /dev/null
+
+    echo "Waiting for Worker Lambda code update..."
+    aws lambda wait function-updated --function-name $WORKER_FUNCTION_NAME --region $AWS_REGION
+
+    echo "Updating Worker Lambda configuration..."
+    aws lambda update-function-configuration \
+        --function-name $WORKER_FUNCTION_NAME \
+        --environment "Variables={DYNAMODB_TABLE_PREFIX=${DYNAMODB_TABLE_PREFIX},DYNAMODB_REGION=${DYNAMODB_REGION},DYNAMODB_ENDPOINT=,IS_LAMBDA=true}" \
+        --vpc-config SubnetIds=[],SecurityGroupIds=[] \
+        --region $AWS_REGION > /dev/null
 else
     echo "Creating new Worker Lambda function..."
     aws lambda create-function \
@@ -103,8 +124,7 @@ else
         --zip-file fileb:///tmp/lambda-deployment.zip \
         --timeout 900 \
         --memory-size 1024 \
-        --environment "Variables={DATABASE_URL=mysql+pymysql://admin:StockTrack2024Secure@${DB_ENDPOINT}:3306/stock_track_record,IS_LAMBDA=true}" \
-        --vpc-config SubnetIds=${VPC_SUBNETS},SecurityGroupIds=${VPC_SECURITY_GROUP} \
+        --environment "Variables={DYNAMODB_TABLE_PREFIX=${DYNAMODB_TABLE_PREFIX},DYNAMODB_REGION=${DYNAMODB_REGION},DYNAMODB_ENDPOINT=,IS_LAMBDA=true}" \
         --region $AWS_REGION > /dev/null
 fi
 

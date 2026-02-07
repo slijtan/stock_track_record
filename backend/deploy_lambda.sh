@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-cd /Users/ltan/Code/claude/stock_track_record/backend
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
 
 echo "Cleaning up..."
 rm -rf package
