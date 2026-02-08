@@ -27,17 +27,17 @@ mkdir -p /tmp/lambda-package
 
 # Install dependencies into package directory (Linux x86_64 for Lambda)
 # First, install packages with native extensions using Linux wheels
-pip install pydantic pydantic-core aiohttp -t /tmp/lambda-package --quiet --upgrade \
+pip3 install pydantic pydantic-core aiohttp -t /tmp/lambda-package --quiet --upgrade \
     --platform manylinux2014_x86_64 \
     --implementation cp \
     --python-version 3.11 \
     --only-binary=:all:
 
 # Then install the rest of the requirements (pure Python packages)
-pip install -r requirements.txt -t /tmp/lambda-package --quiet --upgrade --no-deps
+pip3 install -r requirements.txt -t /tmp/lambda-package --quiet --upgrade --no-deps
 
 # Install remaining dependencies
-pip install annotated-types typing_extensions anyio starlette mangum httpx google-genai \
+pip3 install annotated-types typing_extensions anyio starlette mangum httpx google-genai \
     pydantic-settings python-dotenv httpcore sniffio certifi idna h11 \
     google-api-python-client google-auth google-auth-httplib2 httplib2 uritemplate pyparsing \
     cachetools pyasn1 pyasn1-modules rsa youtube-transcript-api yfinance \

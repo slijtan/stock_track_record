@@ -23,6 +23,6 @@ echo "Table prefix: StockTrackRecord"
 DYNAMODB_ENDPOINT="" \
 DYNAMODB_TABLE_PREFIX="StockTrackRecord" \
 DYNAMODB_REGION="us-east-1" \
-python scripts/create_tables.py
+python3 scripts/create_tables.py
 
 echo "Done. Verify tables in AWS Console: https://console.aws.amazon.com/dynamodbv2/home?region=us-east-1#tables"
